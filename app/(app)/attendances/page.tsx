@@ -97,7 +97,7 @@ type AttendanceRow = {
   reconciliationStatus?: ReconciliationStatus;
 };
 
-type ReconItem = { id: string; status: "PAID" | "UNPAID" | "PAID_NOT_REGISTERED"; patientName: string; amount: number };
+type ReconItem = { id: string; status: "PAID" | "UNPAID" | "PAID_NOT_REGISTERED"; patientName: string; date: string; amount: number };
 
 /**
  * Asistencias: tabla con filtros y formulario para registrar una nueva asistencia.
