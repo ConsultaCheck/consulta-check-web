@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -19,8 +19,8 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-/** Pantalla de inicio de sesión. Llama al API y guarda el token. */
-export default function LoginPage() {
+/** Contenido del login que usa useSearchParams (requiere Suspense en Next 14). */
+function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -152,6 +152,21 @@ export default function LoginPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+/** Pantalla de inicio de sesión. Envuelta en Suspense por useSearchParams. */
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10">
+          <div className="text-sm text-muted-foreground">Cargando…</div>
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }
 
