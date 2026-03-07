@@ -1,32 +1,64 @@
-# If you prefer the allow list template instead of the deny list, see community template:
-# https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
-#
-# Binaries for programs and plugins
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
+# ===========================================
+# ConsultaCheck Web - Gitignore
+# ===========================================
 
-# Test binary, built with `go test -c`
-*.test
+# Dependencias
+node_modules/
+/.pnp
+.pnp.js
+.yarn/install-state.gz
 
-# Code coverage profiles and other test artifacts
-*.out
-coverage.*
-*.coverprofile
-profile.cov
+# Next.js
+/.next/
+/out/
 
-# Dependency directories (remove the comment below to include it)
-# vendor/
+# Build de producción
+/build
 
-# Go workspace file
-go.work
-go.work.sum
-
-# env file
+# Variables de entorno (NUNCA subir credenciales ni URLs sensibles)
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
 
-# Editor/IDE
-# .idea/
-# .vscode/
+# Mantener .env.example como plantilla (no ignorar)
+
+# Vercel
+.vercel
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+/coverage
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Sistema operativo
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# IDE / Editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Certificados (nunca subir)
+*.pem
+
+# Temporal y cache
+.temp/
+tmp/
+.cache/
