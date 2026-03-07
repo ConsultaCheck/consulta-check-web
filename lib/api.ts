@@ -1,9 +1,17 @@
+const DEFAULT_API_URL = "http://localhost:4000";
+
+function normalizeApiUrl(url: string): string {
+  const trimmed = url.trim().replace(/\/+$/, "");
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+}
+
 /** URL base del API (backend). En desarrollo suele ser http://localhost:4000 */
 export function getApiUrl(): string {
-  if (typeof window !== "undefined") {
-    return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-  }
-  return process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+  const raw = process.env.NEXT_PUBLIC_API_URL ?? DEFAULT_API_URL;
+  return normalizeApiUrl(raw);
 }
 
 /** Token JWT guardado en el cliente (localStorage). */
