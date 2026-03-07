@@ -1,8 +1,7 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -19,12 +18,9 @@ const loginSchema = z.object({
 
 type LoginForm = z.infer<typeof loginSchema>;
 
-/** Contenido del login que usa useSearchParams (requiere Suspense en Next 14). */
-function LoginContent() {
+export default function LoginPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
@@ -36,12 +32,6 @@ function LoginContent() {
       password: "",
     },
   });
-
-  useEffect(() => {
-    if (searchParams.get("registered") === "1") {
-      setSuccessMessage("Cuenta creada. Inicie sesión con su correo y contraseña.");
-    }
-  }, [searchParams]);
 
   const onSubmit = async (data: LoginForm) => {
     setErrorMessage(null);
@@ -96,11 +86,6 @@ function LoginContent() {
                   {errorMessage}
                 </p>
               )}
-              {successMessage && (
-                <p className="rounded-md bg-green-500/10 px-3 py-2 text-sm text-green-700 dark:text-green-400">
-                  {successMessage}
-                </p>
-              )}
               <div className="space-y-2">
                 <Label htmlFor="email">Correo electrónico</Label>
                 <Input
@@ -140,33 +125,11 @@ function LoginContent() {
               >
                 {isSubmitting ? "Ingresando..." : "Ingresar"}
               </Button>
-
-              <p className="mt-4 text-center text-sm text-muted-foreground">
-                ¿No tiene cuenta?{" "}
-                <Link href="/register" className="font-medium text-primary underline underline-offset-4">
-                  Crear cuenta
-                </Link>
-              </p>
             </form>
           </CardContent>
         </Card>
       </div>
     </div>
-  );
-}
-
-/** Pantalla de inicio de sesión. Envuelta en Suspense por useSearchParams. */
-export default function LoginPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 py-10">
-          <div className="text-sm text-muted-foreground">Cargando…</div>
-        </div>
-      }
-    >
-      <LoginContent />
-    </Suspense>
   );
 }
 
