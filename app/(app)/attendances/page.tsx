@@ -188,6 +188,31 @@ export default function AttendancesPage() {
 
   const normalizeRut = (s: string) => s.replace(/[^\da-z]/gi, "");
 
+  const formatRut = (value: string) => {
+    const clean = value.replace(/[^0-9kK]/g, "").toUpperCase();
+    if (!clean) return "";
+
+    const cuerpo = clean.slice(0, -1);
+    const dv = clean.slice(-1);
+
+    if (!cuerpo) return dv;
+
+    let cuerpoFormateado = "";
+    let i = cuerpo.length;
+    let contador = 0;
+
+    while (i-- > 0) {
+      cuerpoFormateado = cuerpo.charAt(i) + cuerpoFormateado;
+      contador++;
+      if (contador === 3 && i > 0) {
+        cuerpoFormateado = "." + cuerpoFormateado;
+        contador = 0;
+      }
+    }
+
+    return `${cuerpoFormateado}-${dv}`;
+  };
+
   const filtered = useMemo(() => {
     const name = nameFilter.trim().toLowerCase();
     const rut = normalizeRut(rutFilter.trim());
@@ -269,6 +294,7 @@ export default function AttendancesPage() {
           coverage: created.coverage,
           dateOfAttendance: created.dateOfAttendance,
           totalAmount: created.totalAmount,
+          reconciliationStatus: created.reconciliationStatus ?? null,
         };
 
         setAttendances((prev) => [mapped, ...prev]);
@@ -665,8 +691,13 @@ export default function AttendancesPage() {
               <Label htmlFor="patientDocument">RUT / Pasaporte</Label>
               <Input
                 id="patientDocument"
-                placeholder="Ej: 12.345.678-9"
-                {...form.register("patientDocument")}
+                placeholder="Ej: 20.008.931-6"
+                value={form.watch("patientDocument")}
+                onChange={(e) =>
+                  form.setValue("patientDocument", formatRut(e.target.value), {
+                    shouldValidate: true,
+                  })
+                }
               />
               {form.formState.errors.patientDocument && (
                 <p className="text-sm text-destructive">
