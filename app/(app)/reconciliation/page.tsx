@@ -29,6 +29,7 @@ import { GitCompare, Info, CheckCircle2, XCircle, AlertTriangle, RefreshCw } fro
 type SuggestedMatch = {
   id: string;
   patientName: string;
+  patientDocument?: string;
   date: string;
   amount: number;
   liquidationId?: string;
@@ -37,6 +38,7 @@ type SuggestedMatch = {
 type ApiReconciliationItem = {
   id: string;
   patientName: string;
+  patientDocument?: string;
   date: string;
   coverage?: string;
   amount: number;
@@ -61,16 +63,25 @@ const statusConfig: Record<
 export default function ReconciliationPage() {
   const router = useRouter();
   const [items, setItems] = useState<ApiReconciliationItem[]>([]);
+  const [statusFilter, setStatusFilter] = useState<ReconciliationStatus | "ALL">("ALL");
+  const [coverageFilter, setCoverageFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [modalItem, setModalItem] = useState<ApiReconciliationItem | null>(null);
   const [linking, setLinking] = useState(false);
+  const [from, setFrom] = useState<string | null>(null);
+  const [to, setTo] = useState<string | null>(null);
 
-  const loadReconciliation = async () => {
+  const loadReconciliation = async (params?: { from?: string | null; to?: string | null; coverage?: string }) => {
     try {
       setLoading(true);
       setError(null);
-      const data = await apiFetch<ApiReconciliationItem[]>("/reconciliation");
+      const qs = new URLSearchParams();
+      if (params?.from) qs.set("from", params.from);
+      if (params?.to) qs.set("to", params.to);
+      if (params?.coverage && params.coverage !== "all") qs.set("coverage", params.coverage);
+      const url = `/reconciliation${qs.toString() ? `?${qs.toString()}` : ""}`;
+      const data = await apiFetch<ApiReconciliationItem[]>(url);
       setItems(data);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Error al cargar reconciliación";
@@ -84,12 +95,38 @@ export default function ReconciliationPage() {
   };
 
   useEffect(() => {
-    void loadReconciliation();
+    // Obtener último mes con liquidación para usarlo como rango inicial
+    const init = async () => {
+      try {
+        const liquidations = await apiFetch<{ month: number; year: number }[]>("/liquidations");
+        if (liquidations.length > 0) {
+          const { month, year } = liquidations[0]!;
+          const fromDate = new Date(year, month - 1, 1);
+          const toDate = new Date(year, month, 0);
+          const fromStr = fromDate.toISOString().slice(0, 10);
+          const toStr = toDate.toISOString().slice(0, 10);
+          setFrom(fromStr);
+          setTo(toStr);
+          await loadReconciliation({ from: fromStr, to: toStr, coverage: coverageFilter });
+        } else {
+          await loadReconciliation();
+        }
+      } catch {
+        await loadReconciliation();
+      }
+    };
+    void init();
   }, []);
 
-  const paidItems = items.filter((r) => r.status === "PAID");
-  const unpaidItems = items.filter((r) => r.status === "UNPAID");
-  const diffItems = items.filter((r) => r.status === "PAID_NOT_REGISTERED");
+  const filteredItems = items.filter((r) => {
+    if (statusFilter !== "ALL" && r.status !== statusFilter) return false;
+    if (coverageFilter !== "all" && r.coverage !== coverageFilter) return false;
+    return true;
+  });
+
+  const paidItems = filteredItems.filter((r) => r.status === "PAID");
+  const unpaidItems = filteredItems.filter((r) => r.status === "UNPAID");
+  const diffItems = filteredItems.filter((r) => r.status === "PAID_NOT_REGISTERED");
 
   const paid = paidItems.length;
   const unpaid = unpaidItems.length;
@@ -99,7 +136,7 @@ export default function ReconciliationPage() {
   const unpaidAmount = unpaidItems.reduce((s, r) => s + r.amount, 0);
   const diffAmount = diffItems.reduce((s, r) => s + r.amount, 0);
   const totalAmount = paidAmount + unpaidAmount + diffAmount;
-  const totalItems = items.length;
+  const totalItems = filteredItems.length;
   const conciliationRate = totalItems > 0 ? Math.round((paid / totalItems) * 100) : 0;
 
   const formatCurrency = (n: number) =>
@@ -167,10 +204,20 @@ export default function ReconciliationPage() {
             Comparación de pacientes atendidos vs pagados
           </p>
         </div>
-        <Button size="sm" variant="outline" onClick={() => void loadReconciliation()} disabled={loading} className="h-9">
-          <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-          Actualizar
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              void loadReconciliation({ from, to, coverage: coverageFilter });
+            }}
+            disabled={loading}
+            className="h-9"
+          >
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
+            Actualizar
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -290,10 +337,41 @@ export default function ReconciliationPage() {
 
       <Card className="overflow-hidden">
         <CardHeader className="border-b border-border/60 py-3 px-5">
-          <CardTitle className="text-base font-medium">Detalle por estado</CardTitle>
-          <p className="text-xs text-muted-foreground font-normal">
-            Haga clic en el ícono de información para resolver diferencias o no pagados.
-          </p>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle className="text-base font-medium">Detalle por estado</CardTitle>
+              <p className="text-xs text-muted-foreground font-normal">
+                Haga clic en el ícono de información para resolver diferencias o no pagados.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <select
+                className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as ReconciliationStatus | "ALL")}
+              >
+                <option value="ALL">Todos</option>
+                <option value="PAID">Pagado</option>
+                <option value="UNPAID">No pagado</option>
+                <option value="PAID_NOT_REGISTERED">Pagado no registrado</option>
+              </select>
+              <select
+                className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+                value={coverageFilter}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setCoverageFilter(v);
+                  void loadReconciliation({ from, to, coverage: v });
+                }}
+              >
+                <option value="all">Todas las coberturas</option>
+                <option value="FONASA">FONASA</option>
+                <option value="ISAPRE">ISAPRE</option>
+                <option value="FUERZAS_ARMADAS">FUERZAS ARMADAS</option>
+                <option value="PARTICULAR">PARTICULAR</option>
+              </select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -301,6 +379,7 @@ export default function ReconciliationPage() {
               <TableHeader>
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="h-9 text-xs font-medium text-muted-foreground">Paciente</TableHead>
+                  <TableHead className="h-9 text-xs font-medium text-muted-foreground">RUT</TableHead>
                   <TableHead className="h-9 text-xs font-medium text-muted-foreground">Fecha</TableHead>
                   <TableHead className="h-9 text-xs font-medium text-muted-foreground">Cobertura</TableHead>
                   <TableHead className="h-9 text-xs font-medium text-muted-foreground">Monto</TableHead>
@@ -314,18 +393,21 @@ export default function ReconciliationPage() {
                       Cargando...
                     </TableCell>
                   </TableRow>
-                ) : items.length === 0 ? (
+                ) : filteredItems.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="py-6 text-center text-sm text-muted-foreground">
                       No hay datos de reconciliación. Registre asistencias y liquidaciones.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  items.map((r) => {
+                  filteredItems.map((r) => {
                     const config = statusConfig[r.status as ReconciliationStatus];
                     return (
                       <TableRow key={r.id} className="group">
                         <TableCell className="py-2.5 text-sm font-medium">{r.patientName}</TableCell>
+                        <TableCell className="py-2.5 text-sm text-muted-foreground">
+                          {r.patientDocument ?? "—"}
+                        </TableCell>
                         <TableCell className="py-2.5 text-sm text-muted-foreground">
                           {formatDateLocal(r.date, "dd MMM yyyy")}
                         </TableCell>
