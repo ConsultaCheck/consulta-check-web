@@ -126,7 +126,7 @@ export default function AttendancesPage() {
       patientDocument: "",
       coverage: "FONASA",
       date: format(new Date(), "yyyy-MM-dd"),
-      totalAmount: 14870,
+      totalAmount: 15130,
       reconciliationStatus: null as ReconciliationStatus,
     },
   });
@@ -406,7 +406,7 @@ export default function AttendancesPage() {
                 patientDocument: "",
                 coverage: "FONASA",
                 date: format(new Date(), "yyyy-MM-dd"),
-                totalAmount: 14870,
+                totalAmount: 15130,
                 reconciliationStatus: null,
               });
               setOpen(true);
@@ -660,7 +660,7 @@ export default function AttendancesPage() {
               patientDocument: "",
               coverage: "FONASA",
               date: format(new Date(), "yyyy-MM-dd"),
-              totalAmount: 14870,
+              totalAmount: 15130,
               reconciliationStatus: null,
             });
           }
