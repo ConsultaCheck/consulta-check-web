@@ -300,6 +300,10 @@ export default function AttendancesPage() {
         setAttendances((prev) => [mapped, ...prev]);
       }
 
+      // Recargar asistencias y reconciliación para reflejar inmediatamente
+      // los cambios de estado (incluido el modo "Auto").
+      await loadAttendances();
+
       form.reset({
         patientName: "",
         patientDocument: "",
