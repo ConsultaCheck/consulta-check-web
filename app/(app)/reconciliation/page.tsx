@@ -71,6 +71,7 @@ export default function ReconciliationPage() {
   const [linking, setLinking] = useState(false);
   const [from, setFrom] = useState<string | null>(null);
   const [to, setTo] = useState<string | null>(null);
+  const [monthFilter, setMonthFilter] = useState<string>("last"); // "last" | "all" | "custom"
 
   const loadReconciliation = async (params?: { from?: string | null; to?: string | null; coverage?: string }) => {
     try {
@@ -95,7 +96,7 @@ export default function ReconciliationPage() {
   };
 
   useEffect(() => {
-    // Obtener último mes con liquidación para usarlo como rango inicial
+    // Cargar inicialmente usando el último mes con liquidación
     const init = async () => {
       try {
         const liquidations = await apiFetch<{ month: number; year: number }[]>("/liquidations");
@@ -107,11 +108,18 @@ export default function ReconciliationPage() {
           const toStr = toDate.toISOString().slice(0, 10);
           setFrom(fromStr);
           setTo(toStr);
+          setMonthFilter("last");
           await loadReconciliation({ from: fromStr, to: toStr, coverage: coverageFilter });
         } else {
+          setMonthFilter("all");
+          setFrom(null);
+          setTo(null);
           await loadReconciliation();
         }
       } catch {
+        setMonthFilter("all");
+        setFrom(null);
+        setTo(null);
         await loadReconciliation();
       }
     };
@@ -204,7 +212,51 @@ export default function ReconciliationPage() {
             Comparación de pacientes atendidos vs pagados
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span>Rango:</span>
+            <select
+              className="h-8 rounded-md border border-input bg-background px-2 text-xs"
+              value={monthFilter}
+              onChange={(e) => {
+                const value = e.target.value as "last" | "all";
+                setMonthFilter(value);
+                if (value === "all") {
+                  setFrom(null);
+                  setTo(null);
+                  void loadReconciliation({ coverage: coverageFilter });
+                } else if (value === "last") {
+                  // volver a calcular último mes con liquidación
+                  void (async () => {
+                    try {
+                      const liquidations = await apiFetch<{ month: number; year: number }[]>("/liquidations");
+                      if (liquidations.length > 0) {
+                        const { month, year } = liquidations[0]!;
+                        const fromDate = new Date(year, month - 1, 1);
+                        const toDate = new Date(year, month, 0);
+                        const fromStr = fromDate.toISOString().slice(0, 10);
+                        const toStr = toDate.toISOString().slice(0, 10);
+                        setFrom(fromStr);
+                        setTo(toStr);
+                        await loadReconciliation({ from: fromStr, to: toStr, coverage: coverageFilter });
+                      } else {
+                        setFrom(null);
+                        setTo(null);
+                        await loadReconciliation({ coverage: coverageFilter });
+                      }
+                    } catch {
+                      setFrom(null);
+                      setTo(null);
+                      await loadReconciliation({ coverage: coverageFilter });
+                    }
+                  })();
+                }
+              }}
+            >
+              <option value="last">Último mes con liquidación</option>
+              <option value="all">Todos los registros</option>
+            </select>
+          </div>
           <Button
             size="sm"
             variant="outline"
